@@ -1,0 +1,235 @@
+:root {
+  --text: #6b6375;
+  --text-h: #08060d;
+  --bg: #fff;
+  --border: #e5e4e7;
+  --code-bg: #f4f3ec;
+  --accent: #aa3bff;
+  --accent-bg: rgba(170, 59, 255, 0.1);
+  --accent-border: rgba(170, 59, 255, 0.5);
+  --social-bg: rgba(244, 243, 236, 0.5);
+  --shadow:
+    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+
+  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --mono: ui-monospace, Consolas, monospace;
+
+  font: 18px/145% var(--sans);
+  letter-spacing: 0.18px;
+  color-scheme: light dark;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  @media (max-width: 1024px) {
+    font-size: 16px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #9ca3af;
+    --text-h: #f3f4f6;
+    --bg: #16171d;
+    --border: #2e303a;
+    --code-bg: #1f2028;
+    --accent: #c084fc;
+    --accent-bg: rgba(192, 132, 252, 0.15);
+    --accent-border: rgba(192, 132, 252, 0.5);
+    --social-bg: rgba(47, 48, 58, 0.5);
+    --shadow:
+      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+  }
+
+  #social .button-icon {
+    filter: invert(1) brightness(2);
+  }
+}
+
+body {
+  margin: 0;
+}
+
+#root {
+  width: 1126px;
+  max-width: 100%;
+  margin: 0 auto;
+  text-align: center;
+  border-inline: 1px solid var(--border);
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+h1,
+h2 {
+  font-family: var(--heading);
+  font-weight: 500;
+  color: var(--text-h);
+}
+
+h1 {
+  font-size: 56px;
+  letter-spacing: -1.68px;
+  margin: 32px 0;
+  @media (max-width: 1024px) {
+    font-size: 36px;
+    margin: 20px 0;
+  }
+}
+h2 {
+  font-size: 24px;
+  line-height: 118%;
+  letter-spacing: -0.24px;
+  margin: 0 0 8px;
+  @media (max-width: 1024px) {
+    font-size: 20px;
+  }
+}
+p {
+  margin: 0;
+}
+
+code,
+.counter {
+  font-family: var(--mono);
+  display: inline-flex;
+  border-radius: 4px;
+  color: var(--text-h);
+}
+
+code {
+  font-size: 15px;
+  line-height: 135%;
+  padding: 4px 8px;
+  background: var(--code-bg);
+}
+
+/* =====================================
+   SERVICES & PRICING — TABLE DESIGN
+   ===================================== */
+
+.pricing-table {
+  width: 100%;
+  min-width: 720px;
+  table-layout: fixed;
+  border-collapse: collapse;
+  border-spacing: 0;
+  font-size: 15px;
+}
+
+.pricing-table thead th {
+  background: #242219;
+  color: #d9b66f;
+  padding: 16px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 2px solid #c6a15a;
+}
+
+.pricing-table tbody td {
+  padding: 16px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: #39372f;
+  vertical-align: middle;
+  border-bottom: 1px solid #eee8db;
+  overflow-wrap: anywhere;
+}
+
+.pricing-table tbody tr:nth-child(even) {
+  background: #faf8f2;
+}
+
+.pricing-table tbody tr:hover {
+  background: #f1ead9;
+  transition: background 0.2s ease;
+}
+
+/* Column alignment and width */
+.pricing-table th:nth-child(1),
+.pricing-table td:nth-child(1) {
+  width: 34%;
+  text-align: left;
+}
+
+.pricing-table th:nth-child(2),
+.pricing-table td:nth-child(2) {
+  width: 18%;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.pricing-table th:nth-child(3),
+.pricing-table td:nth-child(3) {
+  width: 18%;
+  text-align: left;
+}
+
+.pricing-table th:nth-child(4),
+.pricing-table td:nth-child(4) {
+  width: 30%;
+  text-align: left;
+}
+
+/* Edit / Activate / Deactivate buttons */
+.pricing-table td .subtle-button {
+  background: #f5f1e7;
+  color: #39372f;
+  border: 1px solid #d8c69f;
+  border-radius: 7px;
+  padding: 9px 13px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+/* Dark colour when mouse hovers over buttons */
+.pricing-table td .subtle-button:hover {
+  background: #242219;
+  color: #e3c47d;
+  border-color: #c6a15a;
+}
+
+/* Keyboard focus */
+.pricing-table td .subtle-button:focus-visible {
+  outline: 2px solid #c6a15a;
+  outline-offset: 3px;
+}
+
+/* If your table has a Delete button */
+.pricing-table td .delete-button:hover {
+  background: #3a1919;
+  color: #ffcccc;
+  border-color: #a34b4b;
+}
+
+/* Empty table message */
+.pricing-table .empty-row {
+  text-align: center;
+  padding: 26px;
+  font-size: 15px;
+}
+
+@media (max-width: 600px) {
+  .pricing-table {
+    min-width: 720px;
+  }
+
+  .pricing-table thead th,
+  .pricing-table tbody td {
+    padding: 12px;
+  }
+}
