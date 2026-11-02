@@ -149,12 +149,13 @@ const formatMoney = (value) =>
     maximumFractionDigits: 2,
   }).format(Number(value ?? 0));
 
+
 function CustomerServicesPage({ onSaved }) {
   const [services, setServices] = useState([]);
+  const [selectedServiceIds, setSelectedServiceIds] = useState([""]);
   const [records, setRecords] = useState([]);
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
-  const [serviceId, setServiceId] = useState("");
   const [saving, setSaving] = useState(false);
   const [loadingRecords, setLoadingRecords] = useState(true);
   const [error, setError] = useState("");
@@ -163,7 +164,6 @@ function CustomerServicesPage({ onSaved }) {
   async function loadData() {
     try {
       setError("");
-      setLoadingRecords(true);
 
       const [serviceData, recordData] = await Promise.all([
         getServices(),
@@ -173,21 +173,30 @@ function CustomerServicesPage({ onSaved }) {
       const serviceList = Array.isArray(serviceData)
         ? serviceData
         : serviceData.results ?? [];
+
       const recordList = Array.isArray(recordData)
         ? recordData
         : recordData.results ?? [];
 
       setServices(serviceList);
       setRecords(recordList);
-      setServiceId((current) => current || String(serviceList[0]?.id ?? ""));
+
+      setSelectedServiceIds((current) =>
+        current.length === 1 &&
+        current[0] === "" &&
+        serviceList.length > 0
+          ? [String(serviceList[0].id)]
+          : current
+      );
     } catch (err) {
       console.error("Customer services error:", err);
+
       setError(
         err.response?.status === 401
-          ? "Login expired. Please sign in again and reload this page."
+          ? "Login expired. Please sign in again."
           : err.response?.status === 403
           ? "You do not have permission to view these records."
-          : "Unable to load services. Check the API and Django server."
+          : "Unable to load services. Check the Django server."
       );
     } finally {
       setLoadingRecords(false);
@@ -201,8 +210,20 @@ function CustomerServicesPage({ onSaved }) {
   async function handleSubmit(event) {
     event.preventDefault();
 
-    if (!serviceId) {
-      setError("No active service found. Add a service in Django Admin first.");
+    const validServiceIds = selectedServiceIds.filter(Boolean);
+
+    if (!customerName.trim()) {
+      setError("Please enter customer name.");
+      return;
+    }
+
+    if (validServiceIds.length === 0) {
+      setError("Please select at least one service.");
+      return;
+    }
+
+    if (new Set(validServiceIds).size !== validServiceIds.length) {
+      setError("Please select different services.");
       return;
     }
 
@@ -214,25 +235,37 @@ function CustomerServicesPage({ onSaved }) {
       await createCustomerService({
         customer_name: customerName.trim(),
         customer_phone: customerPhone.trim(),
-        service: Number(serviceId),
+        services: validServiceIds.map(Number),
       });
 
       setCustomerName("");
       setCustomerPhone("");
+      setSelectedServiceIds([""]);
+
       setMessage("Customer service saved successfully!");
+
       await loadData();
       await onSaved?.();
     } catch (err) {
       console.error("Save customer service error:", err);
+
       setError(
         err.response?.data
           ? JSON.stringify(err.response.data)
-          : "Unable to save. Check your connection and try again."
+          : "Unable to save customer service."
       );
     } finally {
       setSaving(false);
     }
   }
+
+  const totalAmount = selectedServiceIds.reduce((total, id) => {
+    const service = services.find(
+      (item) => String(item.id) === id
+    );
+
+    return total + Number(service?.price ?? 0);
+  }, 0);
 
   return (
     <div style={{ display: "grid", gap: "24px" }}>
@@ -243,152 +276,196 @@ function CustomerServicesPage({ onSaved }) {
             CUSTOMER MANAGEMENT
           </div>
           <h1>Customer Services</h1>
-          <p className="hero-subtitle">Record customer visits and services.</p>
+          <p className="hero-subtitle">
+            Record customer details and select multiple salon services.
+          </p>
         </div>
       </section>
 
       <section className="panel" style={{ padding: "24px" }}>
-        <div className="section-kicker">NEW ENTRY</div>
-        <h3>Record a customer service</h3>
+        <div className="section-kicker">NEW CUSTOMER ENTRY</div>
+        <h3>Record customer service</h3>
 
         <form
-  className="customer-service-form"
-  onSubmit={handleSubmit}
-  style={{
-    display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          onSubmit={handleSubmit}
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
             gap: "16px",
             marginTop: "20px",
           }}
         >
           <label>
-            Customer name
+            Customer Name
             <input
+              type="text"
               value={customerName}
-              onChange={(event) => setCustomerName(event.target.value)}
-              required
-              maxLength={100}
+              onChange={(e) => setCustomerName(e.target.value)}
               placeholder="Enter customer name"
+              required
               style={{
                 display: "block",
                 width: "100%",
-                boxSizing: "border-box",
                 padding: "12px",
                 marginTop: "6px",
+                boxSizing: "border-box",
               }}
             />
           </label>
 
           <label>
-            Phone number
+            Customer Phone
             <input
+              type="text"
               value={customerPhone}
-              onChange={(event) => setCustomerPhone(event.target.value)}
-              maxLength={15}
+              onChange={(e) => setCustomerPhone(e.target.value)}
               placeholder="Enter phone number"
               style={{
                 display: "block",
                 width: "100%",
-                boxSizing: "border-box",
                 padding: "12px",
                 marginTop: "6px",
+                boxSizing: "border-box",
               }}
             />
           </label>
 
-          <label>
-            Select service
-            <select
-              value={serviceId}
-              onChange={(event) => setServiceId(event.target.value)}
-              required
-              style={{
-                display: "block",
-                width: "100%",
-                boxSizing: "border-box",
-                padding: "12px",
-                marginTop: "6px",
-              }}
-            >
-              <option value="">Choose a service</option>
-              {services.map((service) => (
-                <option key={service.id} value={service.id}>
-                  {service.name} — {formatMoney(service.price)}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="customer-services-field">
+  <label className="customer-services-label">
+    Select Services
+  </label>
 
-          <div style={{ alignSelf: "end" }}>
-            <button type="submit" className="primary-button" disabled={saving}>
+  {selectedServiceIds.map((selectedId, index) => (
+    <div key={index} className="service-select-row">
+      <select
+        value={selectedId}
+        required
+        onChange={(event) => {
+          const updated = [...selectedServiceIds];
+          updated[index] = event.target.value;
+          setSelectedServiceIds(updated);
+        }}
+      >
+        <option value="">Choose a service</option>
+
+        {services.map((service) => (
+          <option
+            key={service.id}
+            value={service.id}
+            disabled={selectedServiceIds.some(
+              (id, i) =>
+                i !== index &&
+                id === String(service.id)
+            )}
+          >
+            {service.name} — {formatMoney(service.price)}
+          </option>
+        ))}
+      </select>
+
+      {selectedServiceIds.length > 1 && (
+        <button
+          type="button"
+          onClick={() =>
+            setSelectedServiceIds((current) =>
+              current.filter((_, i) => i !== index)
+            )
+          }
+        >
+          Remove
+        </button>
+      )}
+    </div>
+  ))}
+
+  <button
+    type="button"
+    className="add-service-button"
+    onClick={() =>
+      setSelectedServiceIds((current) => [...current, ""])
+    }
+    disabled={selectedServiceIds.length >= services.length}
+  >
+    + Add Service
+  </button>
+
+  <h3 className="customer-service-total">
+    Total: {formatMoney(totalAmount)}
+  </h3>
+</div>
+
+          <div style={{ gridColumn: "1 / -1" }}>
+            <button
+              type="submit"
+              className="primary-button"
+              disabled={saving || services.length === 0}
+            >
               {saving ? "Saving..." : "Save Customer Service"}
             </button>
           </div>
         </form>
 
         {error && (
-          <p role="alert" style={{ color: "#b42318", overflowWrap: "anywhere" }}>
+          <p role="alert" style={{ color: "#b42318" }}>
             {error}
           </p>
         )}
+
         {message && (
           <p role="status" style={{ color: "#247747" }}>
             {message}
           </p>
         )}
-
-        <p style={{ color: "#777", fontSize: "13px" }}>
-          The amount is taken from the selected service price. No employee
-          commission is calculated.
-        </p>
       </section>
 
       <section className="panel" style={{ padding: "24px" }}>
-        <div className="section-kicker">DATABASE RECORDS</div>
+        <div className="section-kicker">CUSTOMER REGISTER</div>
         <h3>Saved customer services</h3>
 
-        <div className="table-scroll" style={{ marginTop: "16px" }}>
-          <table className="services-table customer-service-table">
-            <thead>
-              <tr>
-                <th>CUSTOMER</th>
-                <th>SERVICE</th>
-                <th>EMPLOYEE</th>
-                <th className="right">AMOUNT</th>
-              </tr>
-            </thead>
-            <tbody>
-              {records.map((record) => (
-                <tr key={record.id}>
-                  <td>{record.customer_name}</td>
-                  <td>{record.service_name}</td>
-                  <td>{record.employee_name}</td>
-                  <td className="right">
-                    <strong>{formatMoney(record.amount)}</strong>
-                  </td>
-                </tr>
-              ))}
-              {!loadingRecords && records.length === 0 && (
+        {loadingRecords ? (
+          <p>Loading customer records...</p>
+        ) : (
+          <div className="table-scroll" style={{ marginTop: "16px" }}>
+            <table className="services-table">
+              <thead>
                 <tr>
-                  <td colSpan="4" className="empty-row">
-                    No customer services found.
-                  </td>
+                  <th>CUSTOMER</th>
+                  <th>PHONE</th>
+                  <th>SERVICES</th>
+                  <th>EMPLOYEE</th>
+                  <th className="right">TOTAL</th>
                 </tr>
-              )}
-              {loadingRecords && (
-                <tr>
-                  <td colSpan="4" className="empty-row">
-                    Loading customer records...
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+
+              <tbody>
+                {records.map((record) => (
+                  <tr key={record.id}>
+                    <td>{record.customer_name}</td>
+                    <td>{record.customer_phone || "—"}</td>
+                    <td>{record.service_name || "—"}</td>
+                    <td>{record.employee_name || "—"}</td>
+                    <td className="right">
+                      <strong>{formatMoney(record.amount)}</strong>
+                    </td>
+                  </tr>
+                ))}
+
+                {records.length === 0 && (
+                  <tr>
+                    <td colSpan="5" className="empty-row">
+                      No customer records found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
     </div>
   );
 }
+
 
 function EmployeesPage() {
   const [employees, setEmployees] = useState([]);
@@ -433,41 +510,44 @@ function EmployeesPage() {
 async function handleSubmit(event) {
   event.preventDefault();
 
+  const validServiceIds = selectedServiceIds.filter(Boolean);
+
+  if (validServiceIds.length === 0) {
+    setError("Please select at least one service.");
+    return;
+  }
+
+  if (new Set(validServiceIds).size !== validServiceIds.length) {
+    setError("Please select different services.");
+    return;
+  }
+
   try {
     setSaving(true);
     setError("");
     setMessage("");
 
-    const employeeData = {
-      name: name.trim(),
-      phone: phone.trim(),
-      native_place: nativePlace.trim(),
-      experience_level: experience,
-      daily_salary: dailySalary,
-      is_active: true,
-    };
+    await createCustomerService({
+      customer_name: customerName.trim(),
+      customer_phone: customerPhone.trim(),
+      services: validServiceIds.map(Number),
+    });
 
-    if (editingId !== null) {
-      await updateEmployee(editingId, employeeData);
-      setMessage("Employee updated successfully!");
-    } else {
-      await createEmployee({
-        ...employeeData,
-        username: username.trim(),
-        password,
-      });
-      setMessage("Employee created successfully!");
-    }
+    setCustomerName("");
+    setCustomerPhone("");
+    setSelectedServiceIds([""]);
 
-    resetEmployeeForm();
-    await loadEmployees();
+    setMessage("Customer service saved successfully!");
+
+    await loadData();
+    await onSaved?.();
   } catch (err) {
-    console.error("Save employee error:", err);
+    console.error("Save customer service error:", err);
 
     setError(
       err.response?.data
         ? JSON.stringify(err.response.data)
-        : "Unable to save employee. Check the Django server."
+        : "Unable to save. Check your connection and try again."
     );
   } finally {
     setSaving(false);
@@ -1006,63 +1086,57 @@ async function handleDelete(employee) {
         </h3>
 
         <form
-          className="customer-service-form"
-          onSubmit={handleSubmit}
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: "16px",
-            marginTop: "20px",
-          }}
-        >
-          <label>
-            Service name
-            <input
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              required
-              maxLength={100}
-              placeholder="Example: Haircut"
-            />
-          </label>
+  onSubmit={handleSubmit}
+  className="customer-service-form"
+>
+  <label>
+    Service name
+    <input
+      value={name}
+      onChange={(event) => setName(event.target.value)}
+      required
+      maxLength={100}
+      placeholder="Example: Haircut"
+    />
+  </label>
 
-          <label>
-            Price (₹)
-            <input
-              type="number"
-              value={price}
-              onChange={(event) => setPrice(event.target.value)}
-              required
-              min="0.01"
-              step="0.01"
-              placeholder="Example: 150"
-            />
-          </label>
+  <label>
+    Price (₹)
+    <input
+      type="number"
+      value={price}
+      onChange={(event) => setPrice(event.target.value)}
+      required
+      min="0.01"
+      step="0.01"
+      placeholder="Example: 150"
+    />
+  </label>
 
-          <div style={{ display: "flex", alignItems: "end", gap: "10px" }}>
-            <button
-              type="submit"
-              className="primary-button"
-              disabled={saving}
-            >
-              {saving
-                ? "Saving..."
-                : editingId !== null
-                ? "Update Service"
-                : "Add Service"}
-            </button>
+  <div className="service-form-actions">
+    <button
+      type="submit"
+      className="primary-button"
+      disabled={saving}
+    >
+      {saving
+        ? "Saving..."
+        : editingId !== null
+        ? "Update Service"
+        : "Add Service"}
+    </button>
 
-            {editingId !== null && (
-              <button
-                type="button"
-                className="subtle-button"
-                onClick={cancelEdit}
-              >
-                Cancel
-              </button>
-            )}
-          </div>
-        </form>
+    {editingId !== null && (
+      <button
+        type="button"
+        className="subtle-button"
+        onClick={cancelEdit}
+      >
+        Cancel
+      </button>
+    )}
+  </div>
+</form>
 
         {error && (
           <p role="alert" style={{ color: "#b42318", overflowWrap: "anywhere" }}>
@@ -2446,7 +2520,7 @@ function ReportsPage() {
         <h3>Day-by-day breakdown</h3>
 
         <div className="table-scroll" style={{ marginTop: "16px" }}>
-          <table className="services-table">
+          <table className="services-table customer-service-table">
             <thead>
               <tr>
                 <th>DATE</th>

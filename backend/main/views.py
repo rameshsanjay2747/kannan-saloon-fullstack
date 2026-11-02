@@ -24,16 +24,19 @@ class CustomerServiceListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         user = self.request.user
 
-        if user.role == "ADMIN" or user.is_superuser:
-            return CustomerService.objects.all()
+        queryset = CustomerService.objects.select_related(
+            "employee", "service"
+        ).prefetch_related(
+            "items__service"
+        )
 
-        return CustomerService.objects.filter(employee=user)
+        if user.role == "ADMIN" or user.is_superuser:
+            return queryset
+
+        return queryset.filter(employee=user)
 
     def perform_create(self, serializer):
-        serializer.save(
-            employee=self.request.user,
-            amount=serializer.validated_data["service"].price
-        )
+        serializer.save(employee=self.request.user)
 
 
 class ServiceManagementListCreateView(generics.ListCreateAPIView):
